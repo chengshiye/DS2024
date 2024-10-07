@@ -4,6 +4,8 @@
 #include <ctime>   // For time()
 #include <cmath>
 #include <algorithm>
+
+using namespace std;
 typedef int Rank; //秩
 # define DEFAULT_CAPACITY 3 //默认的初始容量(实际应用中可设置为更大)
 
@@ -211,7 +213,23 @@ public:
 	template < typename VST> void traverse(VST&vistor){//借助函数对象机制
         for(int i=0;i<size; i++)visitor (elem[i]);}//遍历向量
 		//遍历(使用函数对象, 可全局性修改)
+		Vector<T> intervalSearch(double m1, double m2) const;
 	};//Vector
+	template <typename T>
+Vector<T> Vector<T>::intervalSearch(double m1, double m2) const
+{
+    Vector<T> result;
+    for (Rank i = 0; i < size; i++)
+    {
+        double modulus = elem[i].modulus();
+        if (modulus >= m1 && modulus < m2)
+        {
+            result.insert(result.size(), elem[i]);
+        }
+    }
+    return result;
+}
+	
 	// 主函数，用于测试 Vector 类
     int main() {
     srand(time(0)); // 初始化随机数生成器
@@ -226,7 +244,7 @@ public:
 
     // 使用 unsort 函数置乱向量
     complexVec.unsort(0, complexVec.getSize() - 1);
-    cout << "Shuffled vector using unsort:" << endl;
+
     for (int i = 0; i < complexVec.getSize(); ++i) {
         cout << complexVec[i].real << " + " << complexVec[i].imag << "i" << endl;
     }
@@ -274,13 +292,15 @@ public:
     cout << "Sort time: " << double(end - start) / CLOCKS_PER_SEC << " seconds" << endl;
 
     // 测试区间查找
-    double m1 = 50;
-    double m2 = 70;
-    Vector<Complex> result = intervalSearch(complexVec, m1, m2);
-    cout << "Interval search results:" << endl;
-    for (int i = 0; i < result.getSize(); ++i) {
-        cout << result[i].real << " + " << result[i].imag << "i" << endl;
-    }
+//    double m1 = 50;
+//    double m2 = 70;
+//    Vector<Complex> result = intervalSearch(complexVec, m1, m2);
+//    cout << "Interval search results:" << endl;
+//    for (int i = 0; i < result.getSize(); ++i) {
+//        cout << result[i].real << " + " << result[i].imag << "i" << endl;
+//    }
+Vector<Complex> result = complexVec.intervalSearch(30, 50);
+    cout << "Range Search Result [30, 50): ";
 
     return 0;
 }
