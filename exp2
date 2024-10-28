@@ -1,0 +1,581 @@
+1.
+#include <iostream>
+
+#include <stack>
+
+#include <string>
+
+#include <cctype>
+
+#include <cmath>
+
+#include <stdexcept>
+
+#include <vector>
+
+#include <cstring>
+
+
+
+using namespace std;
+
+
+
+#define N_OPTR 9 //运算符总数
+
+typedef enum { ADD, SUB, MUL, DIV, POW, FAC, L_P, R_P, EOE } Operator; //运算符集合
+
+//加、减、乘、除、乘方、阶乘、左括号、右括号、起始符与终止符
+
+
+
+const char pri[N_OPTR][N_OPTR] = { //运算符优先等级 [栈顶] [当前]
+
+    /*              |-------------------- 当 前 运 算 符 --------------------| */
+
+    /*              +      -      *      /      ^   !      (      )      \0 */
+
+    /* --  + */    '>',   '>',   '<',   '<',   '<',   '<',   '<',   '>',   '>',
+
+    /* |   - */    '>',   '>',   '<',   '<',   '<',   '<',   '<',   '>',   '>',
+
+    /* 栈  * */    '>',   '>',   '>',   '>',   '<',   '<',   '<',   '>',   '>',
+
+    /* 顶  / */    '>',   '>',   '>',   '>',   '<',   '<',   '<',   '>',   '>',
+
+    /* 运  ^ */    '>',   '>',   '>',   '>',   '>',   '<',   '<',   '>',   '>',
+
+    /* 算! */    '>',   '>',   '>',   '>',   '>',   '>',   ' ',   '>',   '>',
+
+    /* 符  ( */    '<',   '<',   '<',   '<',   '<',   '<',   '<',   '~',   ' ',
+
+    /* |   ) */    ' ',   ' ',   ' ',   ' ',   ' ',   ' ',   ' ',   ' ',   ' ',
+
+    /* -- \0 */    '<',   '<',   '<',   '<',   '<',   '<',   '<',   ' ',   '~'
+
+};
+
+
+
+// 前向声明
+
+template <typename T>
+
+class Stack;
+
+
+
+template <typename T>
+
+class Vector {
+
+public:
+
+    void insert(const T& e) {
+
+        data.push_back(e);
+
+    }
+
+
+
+    T remove(int index) {
+
+        if (index < 0 || index >= data.size()) {
+
+            throw std::out_of_range("Index is out of range");
+
+        }
+
+        return data[index];
+
+    }
+
+
+
+    T& operator[](int index) {
+
+        if (index < 0 || index >= data.size()) {
+
+            throw std::out_of_range("Index is out of range");
+
+        }
+
+        return data[index];
+
+    }
+
+
+
+    bool empty() {
+
+        return data.empty();
+
+    }
+
+
+
+    size_t size() {
+
+        return data.size();
+
+    }
+
+
+
+private:
+
+    std::vector<T> data;
+
+};
+
+
+
+
+
+template < typename T > class Stack : public Vector <T> {
+
+public:
+
+
+
+    // 沿用原有接口：size(), empty()
+
+    // 入栈：等效于将新元素作为向量的末元素插入
+
+    void push(const T& e) { this->insert(e); }
+
+    // 出栈：等效于删除向量的末元素
+
+    T pop() { return this->remove(this->size() - 1); }
+
+    // 取顶：直接返回向量的末元素
+
+    T& top() { return (*this)[this->size() - 1]; }
+
+};
+
+
+
+// 实现假设的函数
+
+void readNumber(char* S, Stack<float>& opnd) {
+
+    float num = 0;
+
+    bool decimalPart = false;
+
+    int decimalPlaces = 1;
+
+    while ((*S >= '0' && *S <= '9') || (*S == '.' &&!decimalPart)) {
+
+        if (*S == '.') {
+
+            decimalPart = true;
+
+        } else {
+
+            if (decimalPart) {
+
+                num = num + (*S - '0') * (1.0 / decimalPlaces);
+
+                decimalPlaces *= 10;
+
+            } else {
+
+                num = num * 10 + (*S - '0');
+
+            }
+
+        }
+
+        S++;
+
+    }
+
+    opnd.push(num);
+
+}
+
+
+
+void append(char*& RPN, flo at num) {
+
+    // 这里只是一个简单的示例实现，实际情况可能更复杂
+
+    char buffer[20];
+
+    snprintf(buffer, sizeof(buffer), "%f", num);
+
+    int len = strlen(buffer);
+
+    char* newRPN = new char[strlen(RPN) + len + 1];
+
+    strcpy(newRPN, RPN);
+
+    strcat(newRPN, buffer);
+
+    delete[] RPN;
+
+    RPN = newRPN;
+
+}
+
+
+
+char orderBetween(char topOptr, char currChar) {
+
+    // 这里只是一个简单的示例实现，实际情况可能更复杂
+
+    if ((topOptr == '+' || topOptr == '-') && (currChar == '+' || currChar == '-'))
+
+        return '>';
+
+    else if ((topOptr == '*' || topOptr == '/') && (currChar == '*' || currChar == '/'))
+
+        return '>';
+
+    else if ((topOptr == '^' && currChar == '^'))
+
+        return '>';
+
+    else if ((topOptr == '(' && currChar == ')'))
+
+        return '=';
+
+    else if (topOptr == '(')
+
+        return '<';
+
+    else if (currChar == '(')
+
+        return '<';
+
+    else if (currChar == ')')
+
+        return '>';
+
+    else
+
+        return '<';
+
+}
+
+
+
+float calcu(float p0pnd1, char op, float p0pnd2) {
+
+    // 这里只是一个简单的示例实现，实际情况可能更复杂
+
+    switch (op) {
+
+    case '+':
+
+        return p0pnd1 + p0pnd2;
+
+    case '-':
+
+        return p0pnd1 - p0pnd2;
+
+    case '*':
+
+        return p0pnd1 * p0pnd2;
+
+    case '/':
+
+        return p0pnd1 / p0pnd2;
+
+    case '^':
+
+        return pow(p0pnd1, p0pnd2);
+
+    }
+
+    return 0;
+
+}
+
+
+
+float calcu(char op, float p0pnd) {
+
+    // 这里只是一个简单的示例实现，实际情况可能更复杂
+
+    if (op == '!') {
+
+        int n = static_cast<int>(p0pnd);
+
+        float result = 1;
+
+        for (int i = 2; i <= n; i++) {
+
+            result *= i;
+
+        }
+
+        return result;
+
+    }
+
+    return 0;
+
+}
+
+
+
+float evaluate(char* S, char*& RPN) {
+
+    Stack<float> opnd;
+
+    Stack<char> optr;
+
+    optr.push('$');
+
+    std::cout << "Starting evaluation." << std::endl;
+
+    Stack<char> tempStack2;
+
+    Stack<float> tempStack; // 在这里声明 tempStack
+
+    while (!optr.empty()) {
+
+        std::cout << "Current character: " << *S << std::endl;
+
+        if (isdigit(*S)) {
+
+            readNumber(S, opnd);
+
+            append(RPN, opnd.top());
+
+            std::cout << "After reading number. Operand stack: ";
+
+            tempStack = opnd;
+
+            while (!tempStack.empty()) {
+
+                std::cout << tempStack.top() << " ";
+
+                tempStack.pop();
+
+            }
+
+            std::cout << std::endl;
+
+        } else {
+
+            switch (orderBetween(optr.top(), *S)) {
+
+            case '<':
+
+                optr.push(*S);
+
+                S++;
+
+                std::cout << "Pushed operator to stack. Operator stack: ";
+
+                tempStack2 = optr;
+
+                while (!tempStack2.empty()) {
+
+                    std::cout << tempStack2.top() << " ";
+
+                    tempStack2.pop();
+
+                }
+
+                std::cout << std::endl;
+
+                break;
+
+            case '=':
+
+                optr.pop();
+
+                S++;
+
+                std::cout << "Popped operator from stack. Operator stack: ";
+
+                tempStack2 = optr;
+
+                while (!tempStack2.empty()) {
+
+                    std::cout << tempStack2.top() << " ";
+
+                    tempStack2.pop();
+
+                }
+
+                std::cout << std::endl;
+
+                break;
+
+            case '>': {
+
+                char op = optr.pop();
+
+                append(RPN, op);
+
+                if ('!' == op) {
+
+                    float p0pnd = opnd.pop();
+
+                    opnd.push(calcu(op, p0pnd));
+
+                } else {
+
+                    float p0pnd2 = opnd.pop(), p0pnd1 = opnd.pop();
+
+                    opnd.push(calcu(p0pnd1, op, p0pnd2));
+
+                }
+
+                std::cout << "Performed calculation. Operand stack: ";
+
+                tempStack = opnd;
+
+                while (!tempStack.empty()) {
+
+                    std::cout << tempStack.top() << " ";
+
+                    tempStack.pop();
+
+                }
+
+                std::cout << std::endl;
+
+                break;
+
+            }
+
+            default:
+
+                exit(-1);
+
+            }
+
+        }
+
+    }
+
+    std::cout << "Evaluation completed." << std::endl;
+
+    return opnd.pop();
+
+}
+
+
+
+
+
+// 主函数
+
+int main() {
+
+    try {
+
+        std::string expression = "1 + 1* 2- 5 / 2";
+
+        char* exprPtr = const_cast<char*>(expression.c_str());
+
+        char* rpn = 0;
+
+        cout << "Before evaluation." << endl;
+
+        float result = evaluate(exprPtr, rpn);
+
+        cout << "After evaluation." << endl;
+
+        std::cout << "Result: " << result << std::endl;
+
+    } catch (const std::exception& e) {
+
+        std::cerr << "Error: " << e.what() << std::endl;
+
+    }
+
+    return 0;
+
+}
+
+2.
+(1)
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <algorithm>
+
+int largestRectangleArea(const std::vector<int>& heights) {
+    int maxArea = 0;
+    std::stack<int> indices;
+    for (int i = 0; i <= heights.size(); ++i) {
+        int h = (i == heights.size() ? 0 : heights[i]);
+        while (!indices.empty() && h < heights[indices.top()]) {
+            int index = indices.top();
+            indices.pop();
+            int height = heights[index];
+            int width = indices.empty() ? i : i - indices.top() - 1;
+            maxArea = std::max(maxArea, height * width);
+        }
+        indices.push(i);
+    }
+    return maxArea;
+}
+
+int main() {
+    std::vector<int> heights;
+    heights.push_back(2);
+    heights.push_back(1);
+    heights.push_back(5);
+    heights.push_back(6);
+    heights.push_back(2);
+    heights.push_back(3);
+    std::cout << "The maximum area is: " << largestRectangleArea(heights) << std::endl;
+    return 0;
+}
+(2)
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <cstdlib>
+#include <ctime>
+
+int largestRectangleArea(const std::vector<int>& heights) {
+    int maxArea = 0;
+    std::stack<int> indices;
+    for (int i = 0; i <= heights.size(); ++i) {
+        int h = (i == heights.size() ? 0 : heights[i]);
+        while (!indices.empty() && h < heights[indices.top()]) {
+            int index = indices.top();
+            indices.pop();
+            int height = heights[index];
+            int width = indices.empty() ? i : i - indices.top() - 1;
+            maxArea = std::max(maxArea, height * width);
+        }
+        indices.push(i);
+    }
+    return maxArea;
+}
+
+void generateRandomDataAndTest() {
+    srand(time(0)); // 初始化随机数种子
+    for (int i = 0; i < 10; ++i) {
+        std::vector<int> heights;
+        int n = rand() % 100 + 1; // 生成 1 到 100 之间的随机数
+        for (int j = 0; j < n; ++j) {
+            heights.push_back(rand() % 10000); // 生成 0 到 10000 之间的随机数
+        }
+        std::cout << "Heights: ";
+        for (size_t h = 0; h < heights.size(); ++h) {
+            std::cout << heights[h] << " ";
+        }
+        std::cout << ", Max Area: " << largestRectangleArea(heights) << std::endl;
+    }
+}
+
+int main() {
+    generateRandomDataAndTest();
+    return 0;
+}
+
+
+
