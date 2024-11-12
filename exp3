@@ -1,0 +1,112 @@
+#include <iostream>
+#include <queue>
+#include <vector>
+#include <map>
+#include <string>
+#include <unordered_map>
+
+using namespace std;
+
+// 二叉树节点
+struct TreeNode {
+    char val;
+    unsigned freq;
+    TreeNode *left;
+    TreeNode *right;
+
+    TreeNode(char x) : val(x), freq(1), left(nullptr), right(nullptr) {}
+};
+
+// 比较函数，用于优先队列
+struct Compare {
+    bool operator()(TreeNode* l, TreeNode* r) {
+        return l->freq > r->freq;
+    }
+};
+
+// 构建Huffman树
+TreeNode* buildHuffmanTree(const unordered_map<char, unsigned>& freq) {
+    priority_queue<TreeNode*, vector<TreeNode*>, Compare> pq;
+
+    for (auto pair : freq) {
+        pq.push(new TreeNode(pair.first));
+    }
+
+    while (pq.size() != 1) {
+        TreeNode *left = pq.top(); pq.pop();
+        TreeNode *right = pq.top(); pq.pop();
+
+        TreeNode *top = new TreeNode('$');
+        top->left = left;
+        top->right = right;
+        top->freq = left->freq + right->freq;
+
+        pq.push(top);
+    }
+
+    return pq.top();
+}
+
+// 生成Huffman编码
+void generateCodes(TreeNode* root, string str, unordered_map<char, string>& codes) {
+    if (!root) return;
+
+    if (root->val != '$') {
+        codes[root->val] = str;
+    }
+
+    generateCodes(root->left, str + "0", codes);
+    generateCodes(root->right, str + "1", codes);
+}
+
+// Huffman编码
+void huffmanCodes(const string& text, unordered_map<char, string>& codes) {
+    unordered_map<char, unsigned> freq;
+
+    // 统计字符频率
+    for (char ch : text) {
+        freq[ch]++;
+    }
+
+    // 构建Huffman树
+    TreeNode* root = buildHuffmanTree(freq);
+
+    // 生成Huffman编码
+    generateCodes(root, "", codes);
+
+    // 释放内存
+    delete root;
+}
+
+// 对单词进行编码
+string encodeWord(const unordered_map<char, string>& codes, const string& word) {
+    string encodedWord = "";
+    for (char ch : word) {
+        if (codes.find(ch) != codes.end()) {
+            encodedWord += codes[ch];
+        }
+    }
+    return encodedWord;
+}
+
+int main() {
+    string text = "I have a dream that one day this nation will rise up live out the true meaning of its creed we hold these truths to be self evident that all men are created equal";
+    text.erase(remove_if(text.begin(), text.end(), [](char c) { return !isalpha(c); }), text.end());
+    text.erase(remove(text.begin(), text.end(), ' '), text.end());
+    transform(text.begin(), text.end(), text.begin(), ::tolower);
+
+    unordered_map<char, string> codes;
+    huffmanCodes(text, codes);
+
+    cout << "Huffman Codes:" << endl;
+    for (auto pair : codes) {
+        cout << pair.first << ": " << pair.second << endl;
+    }
+
+    string word1 = "dream";
+    string word2 = "nation";
+    cout << "Encoded 'dream': " << encodeWord(codes, word1) << endl;
+    cout << "Encoded 'nation': " << encodeWord(codes, word2) << endl;
+
+    return 0;
+}
