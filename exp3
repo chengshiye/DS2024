@@ -1,20 +1,23 @@
 #include <iostream>
 #include <queue>
 #include <vector>
-#include <map>
-#include <string>
 #include <unordered_map>
 
 using namespace std;
 
-// 二叉树节点
+// 定义二叉树节点
 struct TreeNode {
     char val;
-    unsigned freq;
-    TreeNode *left;
-    TreeNode *right;
+    int freq;
+    TreeNode *left, *right;
+    TreeNode(char x) : val(x), freq(0), left(nullptr), right(nullptr) {}
+};
 
-    TreeNode(char x) : val(x), freq(1), left(nullptr), right(nullptr) {}
+// 二叉树数据结构
+class BinTree {
+public:
+    TreeNode* root;
+    BinTree() : root(nullptr) {}
 };
 
 // 比较函数，用于优先队列
@@ -25,88 +28,101 @@ struct Compare {
 };
 
 // 构建Huffman树
-TreeNode* buildHuffmanTree(const unordered_map<char, unsigned>& freq) {
+void buildHuffTree(BinTree& tree, const vector<int>& freq) {
     priority_queue<TreeNode*, vector<TreeNode*>, Compare> pq;
-
-    for (auto pair : freq) {
-        pq.push(new TreeNode(pair.first));
+    for (int i = 0; i < 26; ++i) {
+        pq.push(new TreeNode('A' + i));
     }
-
-    while (pq.size() != 1) {
-        TreeNode *left = pq.top(); pq.pop();
-        TreeNode *right = pq.top(); pq.pop();
-
-        TreeNode *top = new TreeNode('$');
-        top->left = left;
-        top->right = right;
-        top->freq = left->freq + right->freq;
-
-        pq.push(top);
+    while (pq.size() > 1) {
+        TreeNode* left = pq.top(); pq.pop();
+        TreeNode* right = pq.top(); pq.pop();
+        TreeNode* sum = new TreeNode('$');
+        sum->left = left;
+        sum->right = right;
+        sum->freq = left->freq + right->freq;
+        pq.push(sum);
     }
+    tree.root = pq.top();
+}
+class Bitmap {
+private:
+    unsigned char* M;
+    int N, _sz;
+protected:
+    void init(int n) {
+        M = new unsigned char[N = (n + 7) / 8];
+        memset(M, 0, N);
+        _sz = 0;
+    }
+public:
+    Bitmap(int n = 8) { init(n); }
+    ~Bitmap() { delete[] M; M = NULL; _sz = 0; }
+    void set(int k) { expand(k); _sz++; M[k >> 3] |= (0x80 >> (k & 0x07)); }
+    void clear(int k) { expand(k); _sz--; M[k >> 3] &= ~(0x80 >> (k & 0x07)); }
+    bool test(int k) { expand(k); return M[k >> 3] & (0x80 >> (k & 0x07)); }
+    char* bits2string(int n) {
+        expand(n - 1);
+        char* s = new char[n + 1]; s[n] = '\0';
+        for (int i = 0; i < n; i++) s[i] = test(i) ? '1' : '0';
+        return s;
+    }
+    void expand(int k) {
+        if (k < 8 * N) return;
+        int oldN = N; unsigned char* oldM = M;
+        init(2 * k);
+        memcpy_s(M, N, oldM, oldN);
+        delete[] oldM;
+    }
+};
 
-    return pq.top();
+class HuffCode {
+private:
+    Bitmap code;
+public:
+    HuffCode() {}
+    string encode(char c) {
+        int idx = c - 'A';
+        string binary = code.bits2string(8);
+        return binary;
+    }
+};
+
+// 递归函数，用于生成Huffman编码
+void generateHuffmanCode(TreeNode* node, string str, unordered_map<char, string>& huffmanCode) {
+    if (node == nullptr) return;
+    if (node->val != '$') {
+        huffmanCode[node->val] = str;
+    }
+    generateHuffmanCode(node->left, str + "0", huffmanCode);
+    generateHuffmanCode(node->right, str + "1", huffmanCode);
 }
 
-// 生成Huffman编码
-void generateCodes(TreeNode* root, string str, unordered_map<char, string>& codes) {
-    if (!root) return;
-
-    if (root->val != '$') {
-        codes[root->val] = str;
-    }
-
-    generateCodes(root->left, str + "0", codes);
-    generateCodes(root->right, str + "1", codes);
-}
-
-// Huffman编码
-void huffmanCodes(const string& text, unordered_map<char, string>& codes) {
-    unordered_map<char, unsigned> freq;
-
-    // 统计字符频率
-    for (char ch : text) {
-        freq[ch]++;
-    }
-
-    // 构建Huffman树
-    TreeNode* root = buildHuffmanTree(freq);
-
-    // 生成Huffman编码
-    generateCodes(root, "", codes);
-
-    // 释放内存
-    delete root;
-}
-
-// 对单词进行编码
-string encodeWord(const unordered_map<char, string>& codes, const string& word) {
-    string encodedWord = "";
-    for (char ch : word) {
-        if (codes.find(ch) != codes.end()) {
-            encodedWord += codes[ch];
-        }
-    }
-    return encodedWord;
+// Huffman编码算法
+unordered_map<char, string> huffmanEncode(BinTree& tree) {
+    unordered_map<char, string> huffmanCode;
+    generateHuffmanCode(tree.root, "", huffmanCode);
+    return huffmanCode;
 }
 
 int main() {
-    string text = "I have a dream that one day this nation will rise up live out the true meaning of its creed we hold these truths to be self evident that all men are created equal";
-    text.erase(remove_if(text.begin(), text.end(), [](char c) { return !isalpha(c); }), text.end());
-    text.erase(remove(text.begin(), text.end(), ' '), text.end());
-    transform(text.begin(), text.end(), text.begin(), ::tolower);
-
-    unordered_map<char, string> codes;
-    huffmanCodes(text, codes);
-
-    cout << "Huffman Codes:" << endl;
-    for (auto pair : codes) {
-        cout << pair.first << ": " << pair.second << endl;
+    vector<int> freq(26, 0); // 初始化频率数组
+    // 计算《I have a dream》中每个字母的频率
+    string text = "I have a dream that one day ..."; // 示例文本
+    for (char c : text) {
+        if (isalpha(c)) freq[c - 'A']++;
     }
 
-    string word1 = "dream";
-    string word2 = "nation";
-    cout << "Encoded 'dream': " << encodeWord(codes, word1) << endl;
-    cout << "Encoded 'nation': " << encodeWord(codes, word2) << endl;
+    BinTree tree;
+    buildHuffTree(tree, freq);
+
+    unordered_map<char, string> huffmanCode = huffmanEncode(tree);
+    for (auto& p : huffmanCode) {
+        cout << p.first << ": " << p.second << endl;
+    }
+
+    HuffCode huffCode;
+    string encodedDream = huffCode.encode('D');
+    cout << "Encoded 'dream': " << encodedDream << endl;
 
     return 0;
 }
